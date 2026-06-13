@@ -38,11 +38,20 @@ export default function App() {
     setError(null);
     try {
       const response = await fetch(`/api/weather?location=${encodeURIComponent(loc)}`);
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('[App] Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response (${response.status}). The API route might be missing or the server is starting up.`);
+      }
+
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setWeather(data);
       localStorage.setItem('weather_location', loc);
     } catch (err: any) {
+      console.error('[App] Weather fetch error:', err);
       setError(err.message || 'Failed to load weather data');
     } finally {
       setLoading(false);

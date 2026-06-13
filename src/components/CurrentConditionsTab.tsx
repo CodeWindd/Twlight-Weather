@@ -81,46 +81,39 @@ const UVGraph = ({ uvindex }: { uvindex: number }) => {
   );
 };
 
-const CapeMeter = ({ cape, temp, dew, humidity, pressure }: { cape?: number, temp: number, dew: number, humidity: number, pressure: number }) => {
+const CapeMeter = ({ cape, temp, dew, pressure, isSpcLive }: { cape?: number, temp: number, dew: number, pressure: number, isSpcLive?: boolean }) => {
   /**
-   * Refined CAPE Heuristic using Parcel Ascent logic
-   * Better calibrated for severe weather mesoanalysis.
+   * Refined SB-CAPE Heuristic
    */
   const calculateHeuristicCape = () => {
-    if (temp < 60 || dew < 50) return 0;
-
     const tempC = (temp - 32) * (5/9);
     const dewC = (dew - 32) * (5/9);
+    if (tempC < 15 || dewC < 10) return 0;
     
     // Lifting Condensation Level (LCL) estimate
     const lclM = 125 * (tempC - dewC);
     
     let integratedBuoyancy = 0;
-    const dz = 250; // Better resolution
+    const dz = 250;
     
-    // Environment: Standard lapse rate 6.5 C/km
-    // Integration up to the Tropopause for better energy estimation
     for (let z = 0; z <= 12000; z += dz) {
       const tEnv = tempC - (6.5 * (z/1000));
       let tParcel;
       if (z <= lclM) {
         tParcel = tempC - (9.8 * (z/1000));
       } else {
-        // Moist adiabatic approximation (loosely 6C/km in lower trop)
         const lapse = z < 5000 ? 6.0 : 5.0;
         tParcel = (tempC - (9.8 * (lclM/1000))) - (lapse * ((z - lclM)/1000));
       }
       
       const buoyancy = tParcel - tEnv;
       if (buoyancy > 0) {
-        // g * (Tp - Te)/Te * dz
         const g = 9.8;
         const TeK = tEnv + 273.15;
         integratedBuoyancy += g * (buoyancy / TeK) * dz;
       }
     }
     
-    // Normalize and add pressure multiplier
     const pressFactor = Math.max(0.5, 1 + (1013 - pressure) / 100);
     const finalValue = Math.round(integratedBuoyancy * pressFactor);
     return Math.max(0, finalValue);
@@ -139,7 +132,10 @@ const CapeMeter = ({ cape, temp, dew, humidity, pressure }: { cape?: number, tem
     <div className="flex flex-col justify-between h-full">
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
-          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Convective Energy</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Convective Energy</span>
+            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-sm font-mono font-bold tracking-tighter">LIVE SPC</span>}
+          </div>
           <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">SPC Mesoanalysis Proxy</span>
         </div>
         <div className="flex items-center gap-1">
@@ -159,15 +155,12 @@ const CapeMeter = ({ cape, temp, dew, humidity, pressure }: { cape?: number, tem
   );
 };
 
-const CinMeter = ({ cin, temp, dew, humidity, pressure }: { cin?: number, temp: number, dew: number, humidity: number, pressure: number }) => {
+const CinMeter = ({ cin, temp, dew, isSpcLive, pressure }: { cin?: number, temp: number, dew: number, isSpcLive?: boolean, pressure: number }) => {
   /**
    * Convective Inhibition (CIN) Heuristic
-   * Calibrated for MLCIN proxies.
    */
   const calculateHeuristicCin = () => {
     const dewSpread = Math.max(0, temp - dew);
-    // Rough estimate of convective inhibition energy
-    // Influenced heavily by near-surface moisture levels
     const baseCin = dewSpread * 25; 
     const pressInhibition = Math.max(0, (pressure - 1013) * 12);
     return Math.round(baseCin + pressInhibition);
@@ -185,7 +178,10 @@ const CinMeter = ({ cin, temp, dew, humidity, pressure }: { cin?: number, temp: 
     <div className="flex flex-col justify-between h-full">
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
-          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Convective Inhibition</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Convective Inhibition</span>
+            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded-sm font-mono font-bold tracking-tighter">LIVE SPC</span>}
+          </div>
           <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">Atmospheric Cap | MLCIN</span>
         </div>
         <AlertCircle className={`w-3 h-3 ${value > 100 ? 'text-blue-500' : 'text-zinc-600'}`} />
@@ -203,10 +199,9 @@ const CinMeter = ({ cin, temp, dew, humidity, pressure }: { cin?: number, temp: 
 };
 
 
-const ShearMeter = ({ shear, windspeed, windgust, pressure }: { shear?: number, windspeed: number, windgust: number, pressure: number }) => {
+const ShearMeter = ({ shear, srh, windspeed, windgust, pressure, isSpcLive }: { shear?: number, srh?: number, windspeed: number, windgust: number, pressure: number, isSpcLive?: boolean }) => {
   /**
    * Refined 0-6km Bulk Shear Proxy
-   * Better calibrated for non-severe days.
    */
   const calculateHeuristicShear = () => {
     const baseShear = windspeed * 2.0;
@@ -229,14 +224,22 @@ const ShearMeter = ({ shear, windspeed, windgust, pressure }: { shear?: number, 
     <div className="flex flex-col justify-between h-full">
       <div className="flex justify-between items-start">
         <div className="flex flex-col">
-          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Deep Layer Shear</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Deep Layer Shear</span>
+            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded-sm font-mono font-bold tracking-tighter">LIVE SPC</span>}
+          </div>
           <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">0-6km Kinematic Profile</span>
         </div>
         <Activity className="w-3 h-3 text-zinc-600" />
       </div>
-      <div className="flex flex-col items-center py-2">
+      <div className="flex flex-col items-center py-2 relative">
         <div className="text-4xl font-bold font-mono tracking-tighter text-white">{value}</div>
         <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mt-1">KNOTS (0-6KM)</div>
+        {srh !== undefined && (
+          <div className="absolute top-1 right-0 text-[7px] font-mono text-zinc-600 uppercase">
+             SRH: <span className="text-zinc-400">{srh}</span>
+          </div>
+        )}
         <div className={`mt-2 text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 rounded-sm bg-black/40 ${level.color}`}>{level.label}</div>
       </div>
       <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden mt-auto">
@@ -395,8 +398,8 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
             </div>
           </div>
         </div>
-        <div className="flex-1 w-full mt-8 relative" style={{ height: '400px', minHeight: '400px' }}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <div className="flex-1 w-full mt-8 relative" style={{ minHeight: '400px' }}>
+          <ResponsiveContainer width="99%" aspect={1.5}>
 
             <AreaChart data={hourlyData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
               <defs>
@@ -546,15 +549,34 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
       </div>
 
       <div className="md:col-span-6 lg:col-span-4 bg-[#1a1a1a] rounded-[2rem] p-6 border border-zinc-800 min-h-[220px]">
-        <CapeMeter cape={current.cape} temp={current.temp} dew={current.dew} humidity={current.humidity} pressure={current.pressure} />
+        <CapeMeter 
+          cape={current.cape} 
+          temp={current.temp} 
+          dew={current.dew} 
+          pressure={current.pressure}
+          isSpcLive={(current as any)._spc_live}
+        />
       </div>
 
       <div className="md:col-span-6 lg:col-span-4 bg-[#1a1a1a] rounded-[2rem] p-6 border border-zinc-800 min-h-[220px]">
-        <CinMeter cin={current.cin} temp={current.temp} dew={current.dew} humidity={current.humidity} pressure={current.pressure} />
+        <CinMeter 
+          cin={current.cin} 
+          temp={current.temp} 
+          dew={current.dew} 
+          pressure={current.pressure}
+          isSpcLive={(current as any)._spc_live}
+        />
       </div>
 
       <div className="md:col-span-6 lg:col-span-4 bg-[#1a1a1a] rounded-[2rem] p-6 border border-zinc-800 min-h-[220px]">
-        <ShearMeter shear={current.shear} windspeed={current.windspeed} windgust={current.windgust || current.windspeed} pressure={current.pressure} />
+        <ShearMeter 
+          shear={current.shear} 
+          srh={(current as any).srh}
+          windspeed={current.windspeed} 
+          windgust={current.windgust || current.windspeed} 
+          pressure={current.pressure}
+          isSpcLive={(current as any)._spc_live}
+        />
       </div>
 
 
