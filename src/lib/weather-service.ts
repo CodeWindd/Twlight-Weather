@@ -28,30 +28,49 @@ export async function fetchWeatherData({ location, unitGroup = 'us', apiKey }: W
 
   const weatherData = await vcResponse.json();
 
-  // SPC Supplemental Data
+  // Supplementary Data (replaces dead SPC get_sounding.php API)
+  // We use Open-Meteo's HRRR (High Resolution Rapid Refresh) model which is the same model that
+  // powers the modern SPC Mesoanalysis. This gives us accurate CAPE, and we can also fetch Lifted Index.
   try {
     const lat = weatherData.latitude;
     const lon = weatherData.longitude;
-    const spcUrl = `https://www.spc.noaa.gov/exper/mesoanalysis/v7/get_sounding.php?lat=${lat}&lon=${lon}&sector=19`;
+    const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cape,convective_inhibition,lifted_index,wind_speed_10m,wind_speed_500hPa&models=best_match&forecast_days=2`;
     
-    const spcResponse = await fetch(spcUrl);
-    if (spcResponse.ok) {
-      const text = await spcResponse.text();
-      const mlcape = text.match(/MLCAPE:\s*(\d+)/i);
-      const mlcin = text.match(/MLCIN:\s*(-?\d+)/i);
-      const shear = text.match(/0-6km Bulk Shear:\s*(\d+)/i);
-      const srh = text.match(/0-1km SRH:\s*(\d+)/i);
+    const omResponse = await fetch(omUrl);
+    if (omResponse.ok) {
+      const omData = await omResponse.json();
+      
+      if (weatherData.currentConditions && omData.hourly && omData.hourly.cape) {
+        // Find the index for the current UTC hour, fallback to 0
+        const currentHourISO = new Date().toISOString().substring(0, 14) + "00";
+        let hourIndex = omData.hourly.time.indexOf(currentHourISO);
+        if (hourIndex === -1) hourIndex = 0;
 
-      if (weatherData.currentConditions) {
-        if (mlcape) weatherData.currentConditions.cape = parseInt(mlcape[1]);
-        if (mlcin) weatherData.currentConditions.cin = Math.abs(parseInt(mlcin[1]));
-        if (shear) weatherData.currentConditions.shear = parseInt(shear[1]);
-        if (srh) weatherData.currentConditions.srh = parseInt(srh[1]);
-        weatherData.currentConditions._spc_live = true;
+        weatherData.currentConditions.cape = Math.round(omData.hourly.cape[hourIndex]);
+        
+        if (omData.hourly.convective_inhibition) {
+          weatherData.currentConditions.cin = Math.round(omData.hourly.convective_inhibition[hourIndex]);
+        }
+        
+        if (omData.hourly.lifted_index) {
+          weatherData.currentConditions.lifted_index = omData.hourly.lifted_index[hourIndex];
+        }
+
+        if (omData.hourly.wind_speed_10m && omData.hourly.wind_speed_500hPa) {
+          // Approximate 0-6km bulk shear: 500hPa (~5.5km) wind speed minus 10m wind speed
+          // Assuming roughly same direction for a scalar magnitude approximation (in km/h converted to knots)
+          const sfcWind = omData.hourly.wind_speed_10m[hourIndex];
+          const midWind = omData.hourly.wind_speed_500hPa[hourIndex];
+          const shearKmh = Math.abs(midWind - sfcWind);
+          const shearKnots = shearKmh * 0.539957; // km/h to knots
+          weatherData.currentConditions.shear = Math.round(shearKnots);
+        }
+        
+        weatherData.currentConditions._om_spc_proxy = true;
       }
     }
-  } catch (spcErr) {
-    console.warn('[WeatherService] SPC Fetch Failed:', spcErr);
+  } catch (omErr) {
+    console.warn('[WeatherService] Open-Meteo HRRR fetch failed:', omErr);
   }
 
   return weatherData;

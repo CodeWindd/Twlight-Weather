@@ -1,20 +1,26 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Cloudflare Pages + GitHub Setup Guide
 
-# Run and deploy your AI Studio app
+This project is configured to be deployed as a Full-Stack application on **Cloudflare Pages** via **GitHub**.
 
-This contains everything you need to run your app locally.
+## 1. Push to GitHub
+1. In AI Studio, click **Share / Export** and select **Export to GitHub**. 
+2. Follow the prompts to push this code to a new or existing GitHub repository.
 
-View your app in AI Studio: https://ai.studio/apps/496dfa91-d4b8-44b4-9116-2ae1df462d3a
+## 2. Deploy to Cloudflare Pages
+1. Go to your [Cloudflare Dashboard](https://dash.cloudflare.com/) -> **Workers & Pages**.
+2. Click **Create application** -> **Pages** -> **Connect to Git**.
+3. Select the GitHub repository you just created.
+4. In the **Set up builds and deployments** section, use the following settings:
+   - **Framework preset**: `None` (or `Vite`)
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+5. Expand the **Environment variables (advanced)** section and add:
+   - Variable name: `VC_API` (or `VISUAL_CROSSING_API_KEY`)
+   - Value: `<your-visual-crossing-api-key>`
+6. Click **Save and Deploy**.
 
-## Run Locally
+## How the Code Works
+- **Frontend SPA**: Vite builds the React component code inside `/src` into static files in the `/dist` directory. Cloudflare Pages will serve these files directly from its CDN.
+- **Backend API**: The `functions/api/weather.ts` file is a [Cloudflare Pages Function](https://developers.cloudflare.com/pages/functions/). Cloudflare automatically detects the `functions` folder and runs these files securely at the edge. The function is executed when the frontend makes a request to `/api/weather`.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+*(Note: For the AI Studio preview environment, a local Express `server.ts` is running and mirroring the same `/api/weather` logic so you can test it before exporting).*

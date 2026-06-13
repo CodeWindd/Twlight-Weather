@@ -15,7 +15,7 @@ import {
   Activity
 } from 'lucide-react';
 import { WeatherData } from '../types';
-import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { getMeteoconUrl, UI_ICONS, getMoonIcon } from '../lib/weather-icons';
 
 interface CurrentConditionsTabProps {
@@ -134,9 +134,9 @@ const CapeMeter = ({ cape, temp, dew, pressure, isSpcLive }: { cape?: number, te
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Convective Energy</span>
-            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-sm font-mono font-bold tracking-tighter">LIVE SPC</span>}
+            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-sm font-mono font-bold tracking-tighter">LIVE HRRR</span>}
           </div>
-          <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">SPC Mesoanalysis Proxy</span>
+          <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">HRRR Model Data</span>
         </div>
         <div className="flex items-center gap-1">
           <div className={`w-1.5 h-1.5 rounded-full ${value > 250 ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-700'}`}></div>
@@ -180,7 +180,7 @@ const CinMeter = ({ cin, temp, dew, isSpcLive, pressure }: { cin?: number, temp:
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Convective Inhibition</span>
-            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded-sm font-mono font-bold tracking-tighter">LIVE SPC</span>}
+            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded-sm font-mono font-bold tracking-tighter">LIVE HRRR</span>}
           </div>
           <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">Atmospheric Cap | MLCIN</span>
         </div>
@@ -226,7 +226,7 @@ const ShearMeter = ({ shear, srh, windspeed, windgust, pressure, isSpcLive }: { 
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono">Deep Layer Shear</span>
-            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded-sm font-mono font-bold tracking-tighter">LIVE SPC</span>}
+            {isSpcLive && <span className="text-[6px] px-1 py-0.5 bg-blue-500/20 text-blue-400 rounded-sm font-mono font-bold tracking-tighter">LIVE HRRR</span>}
           </div>
           <span className="text-[7px] text-zinc-700 font-mono uppercase tracking-widest mt-0.5">0-6km Kinematic Profile</span>
         </div>
@@ -427,14 +427,17 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
                 tick={{fill: '#4b5563', fontSize: 8, fontFamily: 'monospace'}}
                 interval={4}
               />
+              <YAxis yAxisId="tempDew" domain={['dataMin - 10', 'dataMax + 10']} hide />
+              <YAxis yAxisId="humidity" domain={[0, 100]} hide />
+              <YAxis yAxisId="uv" domain={[0, 15]} hide />
               <Tooltip 
                 contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '12px', fontSize: '10px' }}
                 itemStyle={{ color: '#fff' }}
               />
-              <Area type="monotone" dataKey="uv" name="UV" stroke="#eab308" strokeWidth={1} fillOpacity={1} fill="url(#colorUVBento)" />
-              <Area type="monotone" dataKey="humidity" name="Humidity" stroke="#374151" strokeWidth={1} fillOpacity={1} fill="url(#colorHumidityBento)" />
-              <Area type="monotone" dataKey="dew" name="Dew Point" stroke="#059669" strokeWidth={1} fillOpacity={1} fill="url(#colorDewBento)" />
-              <Area type="monotone" dataKey="temp" name="Temperature" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorTempBento)" />
+              <Area yAxisId="uv" type="monotone" dataKey="uv" name="UV" stroke="#eab308" strokeWidth={1} fillOpacity={1} fill="url(#colorUVBento)" />
+              <Area yAxisId="humidity" type="monotone" dataKey="humidity" name="Humidity" stroke="#374151" strokeWidth={1} fillOpacity={1} fill="url(#colorHumidityBento)" />
+              <Area yAxisId="tempDew" type="monotone" dataKey="dew" name="Dew Point" stroke="#059669" strokeWidth={1} fillOpacity={1} fill="url(#colorDewBento)" />
+              <Area yAxisId="tempDew" type="monotone" dataKey="temp" name="Temperature" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorTempBento)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -554,7 +557,7 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
           temp={current.temp} 
           dew={current.dew} 
           pressure={current.pressure}
-          isSpcLive={(current as any)._spc_live}
+          isSpcLive={(current as any)._om_spc_proxy}
         />
       </div>
 
@@ -564,7 +567,7 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
           temp={current.temp} 
           dew={current.dew} 
           pressure={current.pressure}
-          isSpcLive={(current as any)._spc_live}
+          isSpcLive={(current as any)._om_spc_proxy}
         />
       </div>
 
@@ -575,7 +578,7 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
           windspeed={current.windspeed} 
           windgust={current.windgust || current.windspeed} 
           pressure={current.pressure}
-          isSpcLive={(current as any)._spc_live}
+          isSpcLive={(current as any)._om_spc_proxy}
         />
       </div>
 

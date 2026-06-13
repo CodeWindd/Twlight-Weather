@@ -1,6 +1,6 @@
 import React from 'react';
 import { WeatherData, HourlyForecast } from '../types';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getMeteoconUrl, UI_ICONS } from '../lib/weather-icons';
 
 export default function Hourly96Tab({ weather }: { weather: WeatherData }) {
@@ -99,15 +99,18 @@ export default function Hourly96Tab({ weather }: { weather: WeatherData }) {
                 tick={{fill: '#4b5563', fontSize: 8, fontFamily: 'monospace'}}
                 interval={8}
               />
+              <YAxis yAxisId="tempDew" domain={['dataMin - 10', 'dataMax + 10']} hide />
+              <YAxis yAxisId="precip" domain={[0, 100]} hide />
+              <YAxis yAxisId="uv" domain={[0, 15]} hide />
               <Tooltip 
                 contentStyle={{backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '12px', fontSize: '10px'}}
                 itemStyle={{color: '#fff'}}
                 labelStyle={{color: '#71717a'}}
               />
-              <Area type="monotone" name="UV" dataKey="uv" stroke="#eab308" strokeWidth={1} fillOpacity={1} fill="url(#colorUV96)" />
-              <Area type="monotone" name="Precip" dataKey="precip" stroke="#0e7490" strokeWidth={1} fillOpacity={1} fill="url(#colorPrecip96)" />
-              <Area type="monotone" name="Dew Point" dataKey="dew" stroke="#059669" strokeWidth={1} fillOpacity={1} fill="url(#colorDew96)" />
-              <Area type="monotone" name="Temp" dataKey="temp" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorTemp96)" />
+              <Area yAxisId="uv" type="monotone" name="UV" dataKey="uv" stroke="#eab308" strokeWidth={1} fillOpacity={1} fill="url(#colorUV96)" />
+              <Area yAxisId="precip" type="monotone" name="Precip Probability" dataKey="precip" stroke="#0e7490" strokeWidth={1} fillOpacity={1} fill="url(#colorPrecip96)" />
+              <Area yAxisId="tempDew" type="monotone" name="Dew Point" dataKey="dew" stroke="#059669" strokeWidth={1} fillOpacity={1} fill="url(#colorDew96)" />
+              <Area yAxisId="tempDew" type="monotone" name="Temp" dataKey="temp" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorTemp96)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
