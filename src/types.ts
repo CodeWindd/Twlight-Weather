@@ -48,7 +48,9 @@ export interface DayForecast {
   uvindex: number;
   severerisk: number;
   sunrise: string;
+  sunriseEpoch: number;
   sunset: string;
+  sunsetEpoch: number;
   moonphase: number;
   conditions: string;
   description: string;
@@ -107,7 +109,9 @@ export interface CurrentConditions {
   conditions: string;
   icon: string;
   sunrise: string;
+  sunriseEpoch: number;
   sunset: string;
+  sunsetEpoch: number;
 }
 
 export type TabType = 'current' | 'forecast' | 'hourly' | 'severe' | 'flood' | 'settings';

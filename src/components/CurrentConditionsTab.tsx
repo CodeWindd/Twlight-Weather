@@ -12,7 +12,9 @@ import {
   Moon,
   Sun,
   Zap,
-  Activity
+  Activity,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { WeatherData } from '../types';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -38,6 +40,9 @@ const MoonPhase = ({ phase }: { phase: number }) => {
       </div>
       <div className="text-[8px] text-zinc-600 font-mono uppercase tracking-tighter text-center">
         Cycle: {Math.round(phase * 100)}%
+      </div>
+      <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden mt-auto">
+        <div className="h-full bg-[#a1a1aa] transition-all duration-1000" style={{ width: `${phase * 100}%` }}></div>
       </div>
     </div>
   );
@@ -254,6 +259,7 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
   const current = weather.currentConditions;
   const today = weather.days[0];
   const [searchInput, setSearchInput] = useState(currentLocation);
+  const [expandedAlerts, setExpandedAlerts] = useState<number | null>(null);
   const [recentLocations] = useState<string[]>(() => {
     const saved = localStorage.getItem('weather_recent_locations');
     return saved ? JSON.parse(saved) : [currentLocation];
@@ -299,7 +305,18 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
   });
 
   // Determine if it's day or night for the icon
-  const isDay = current.icon.includes('day') || (!current.icon.includes('night') && current.datetimeEpoch > current.sunrise.split(':').reduce((acc, time) => acc * 60 + +time, 0) * 60);
+  const isDay = current.icon.includes('day') || (!current.icon.includes('night') && current.datetimeEpoch > current.sunriseEpoch);
+
+  // Calculate solar cycle progress
+  const now = new Date().getTime() / 1000;
+  let solarProgress = 0;
+  if (now > current.sunriseEpoch && now < current.sunsetEpoch) {
+    const totalDaylight = current.sunsetEpoch - current.sunriseEpoch;
+    const elapsed = now - current.sunriseEpoch;
+    solarProgress = (elapsed / totalDaylight) * 100;
+  } else if (now >= current.sunsetEpoch) {
+    solarProgress = 100;
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -427,7 +444,7 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
                 tick={{fill: '#4b5563', fontSize: 8, fontFamily: 'monospace'}}
                 interval={4}
               />
-              <YAxis yAxisId="tempDew" domain={['dataMin - 10', 'dataMax + 10']} hide />
+              <YAxis yAxisId="tempDew" domain={['auto', 'auto']} hide />
               <YAxis yAxisId="humidity" domain={[0, 100]} hide />
               <YAxis yAxisId="uv" domain={[0, 15]} hide />
               <Tooltip 
@@ -522,16 +539,19 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={UI_ICONS.sunrise} className="w-6 h-6 opacity-60" />
-              <span className="text-sm font-mono tracking-widest uppercase text-zinc-400">Sunrise</span>
+              <span className="text-[10px] font-mono tracking-widest uppercase text-zinc-400">Sunrise</span>
             </div>
-            <span className="text-lg font-bold">{formatTimeAMPM(current.sunrise, true)}</span>
+            <span className="text-sm font-bold">{formatTimeAMPM(current.sunrise, true)}</span>
+          </div>
+          <div className="w-full bg-zinc-900 h-1 rounded-full overflow-hidden my-2 relative">
+             <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 via-yellow-400 to-orange-600 transition-all duration-1000" style={{ width: `${solarProgress}%` }}></div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src={UI_ICONS.sunset} className="w-6 h-6 opacity-60" />
-              <span className="text-sm font-mono tracking-widest uppercase text-zinc-400">Sunset</span>
+              <span className="text-[10px] font-mono tracking-widest uppercase text-zinc-400">Sunset</span>
             </div>
-            <span className="text-lg font-bold">{formatTimeAMPM(current.sunset, true)}</span>
+            <span className="text-sm font-bold">{formatTimeAMPM(current.sunset, true)}</span>
           </div>
         </div>
         <div className="text-[8px] text-zinc-700 font-mono uppercase tracking-[0.4em] mt-auto">
@@ -585,12 +605,33 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
 
       {/* Severe Alerts */}
       {weather.alerts && weather.alerts.length > 0 ? (
-        <div className="md:col-span-12 bg-red-950/20 border border-red-900/50 p-6 rounded-[2rem] flex items-center gap-6 mt-4 shadow-xl shadow-red-950/10">
-           <img src="https://cdn.meteocons.com/3.0.0-next.10/svg/fill/code-red.svg" className="w-12 h-12 shrink-0" />
-           <div>
-             <h3 className="text-red-400 text-sm font-bold uppercase tracking-widest">{weather.alerts[0].event}</h3>
-             <p className="text-red-300/60 text-xs mt-1 font-mono">{weather.alerts[0].headline}</p>
-           </div>
+        <div className="md:col-span-12 flex flex-col gap-4 mt-4">
+          {weather.alerts.map((alert, idx) => {
+            const isExpanded = expandedAlerts === idx;
+            return (
+              <div key={idx} onClick={() => setExpandedAlerts(isExpanded ? null : idx)} className="cursor-pointer bg-red-950/20 hover:bg-red-950/30 transition-colors border border-red-900/50 p-6 rounded-[2rem] flex flex-col justify-center shadow-xl shadow-red-950/10">
+                 <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-6">
+                     <img src="https://cdn.meteocons.com/3.0.0-next.10/svg/fill/code-red.svg" className="w-12 h-12 shrink-0" />
+                     <div>
+                       <h3 className="text-red-400 text-sm font-bold uppercase tracking-widest">{alert.event}</h3>
+                       <p className="text-red-300/60 text-xs mt-1 font-mono">{alert.headline || 'Tap to read full advisory'}</p>
+                     </div>
+                   </div>
+                   <div className="w-8 h-8 rounded-full bg-red-900/30 flex items-center justify-center shrink-0">
+                     {isExpanded ? <ChevronUp className="w-4 h-4 text-red-400" /> : <ChevronDown className="w-4 h-4 text-red-400" />}
+                   </div>
+                 </div>
+                 {isExpanded && alert.description && (
+                   <div className="mt-6 pt-6 border-t border-red-900/30">
+                     <p className="text-red-200/80 text-xs font-mono leading-relaxed whitespace-pre-wrap">
+                       {alert.description}
+                     </p>
+                   </div>
+                 )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="md:col-span-12 bg-[#1a1a1a] border border-zinc-800 p-6 rounded-[2rem] flex items-center justify-between mt-4">

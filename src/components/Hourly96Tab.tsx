@@ -99,7 +99,7 @@ export default function Hourly96Tab({ weather }: { weather: WeatherData }) {
                 tick={{fill: '#4b5563', fontSize: 8, fontFamily: 'monospace'}}
                 interval={8}
               />
-              <YAxis yAxisId="tempDew" domain={['dataMin - 10', 'dataMax + 10']} hide />
+              <YAxis yAxisId="tempDew" domain={['auto', 'auto']} hide />
               <YAxis yAxisId="precip" domain={[0, 100]} hide />
               <YAxis yAxisId="uv" domain={[0, 15]} hide />
               <Tooltip 

@@ -34,7 +34,7 @@ export async function fetchWeatherData({ location, unitGroup = 'us', apiKey }: W
   try {
     const lat = weatherData.latitude;
     const lon = weatherData.longitude;
-    const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cape,convective_inhibition,lifted_index,wind_speed_10m,wind_speed_500hPa&models=best_match&forecast_days=2`;
+    const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=cape,convective_inhibition,lifted_index,wind_speed_10m,wind_speed_500hPa,uv_index&models=best_match&forecast_days=14`;
     
     const omResponse = await fetch(omUrl);
     if (omResponse.ok) {
@@ -46,7 +46,11 @@ export async function fetchWeatherData({ location, unitGroup = 'us', apiKey }: W
         let hourIndex = omData.hourly.time.indexOf(currentHourISO);
         if (hourIndex === -1) hourIndex = 0;
 
+        // Current overrides
         weatherData.currentConditions.cape = Math.round(omData.hourly.cape[hourIndex]);
+        if (omData.hourly.uv_index) {
+          weatherData.currentConditions.uvindex = omData.hourly.uv_index[hourIndex];
+        }
         
         if (omData.hourly.convective_inhibition) {
           weatherData.currentConditions.cin = Math.round(omData.hourly.convective_inhibition[hourIndex]);
@@ -67,6 +71,22 @@ export async function fetchWeatherData({ location, unitGroup = 'us', apiKey }: W
         }
         
         weatherData.currentConditions._om_spc_proxy = true;
+
+        // Hourly overrides
+        if (omData.hourly.uv_index) {
+           weatherData.days.forEach((day: any) => {
+             if (day.hours) {
+               day.hours.forEach((h: any) => {
+                  // Find matching hour in OM data to override UV
+                  const dateStr = new Date(h.datetimeEpoch * 1000).toISOString().substring(0, 14) + "00";
+                  const hIdx = omData.hourly.time.indexOf(dateStr);
+                  if (hIdx !== -1) {
+                    h.uvindex = omData.hourly.uv_index[hIdx];
+                  }
+               });
+             }
+           });
+        }
       }
     }
   } catch (omErr) {

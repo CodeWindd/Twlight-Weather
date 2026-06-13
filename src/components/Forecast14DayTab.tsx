@@ -2,7 +2,7 @@ import React from 'react';
 import { WeatherData } from '../types';
 import { motion } from 'motion/react';
 import { getMeteoconUrl, UI_ICONS } from '../lib/weather-icons';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Forecast14DayTab({ weather }: { weather: WeatherData }) {
   const chartData = weather.days.slice(0, 14).map(day => ({
@@ -48,6 +48,7 @@ export default function Forecast14DayTab({ weather }: { weather: WeatherData }) 
                 tickLine={false} 
                 tick={{fill: '#4b5563', fontSize: 9, fontFamily: 'monospace'}}
               />
+              <YAxis domain={['auto', 'auto']} hide />
               <Tooltip 
                 contentStyle={{backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '12px', fontSize: '10px'}}
                 itemStyle={{color: '#fff'}}

@@ -32,6 +32,18 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localTime, setLocalTime] = useState<string>('--:--');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const fetchWeather = async (loc: string) => {
     setLoading(true);
@@ -171,10 +183,15 @@ export default function App() {
               Severe Weather Alert
             </span>
           )}
+          {isOffline && (
+            <span className="hidden sm:inline-block px-3 py-1 bg-orange-950/30 text-orange-400 border border-orange-900/50 text-[10px] font-bold rounded-full tracking-widest uppercase">
+              Offline
+            </span>
+          )}
           <div className="text-right">
             <div className="text-2xl font-light tracking-tight">{weather ? `${Math.round(weather.currentConditions.temp)}°` : '--°'}</div>
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono line-clamp-1 max-w-[120px]">
-              {weather?.currentConditions.conditions || 'Offline'}
+              {isOffline ? 'Cached Data' : (weather?.currentConditions.conditions || 'Offline')}
             </div>
           </div>
         </div>
@@ -217,9 +234,9 @@ export default function App() {
       <footer className="px-6 py-4 border-t border-zinc-900 bg-zinc-950 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="flex space-x-6">
           <div className="flex items-center space-x-2">
-            <div className={cn("w-2 h-2 rounded-full", weather ? "bg-green-500" : "bg-red-500")}></div>
+            <div className={cn("w-2 h-2 rounded-full", isOffline ? "bg-orange-500" : (weather ? "bg-green-500" : "bg-red-500"))}></div>
             <span className="text-[10px] text-zinc-500 uppercase font-mono tracking-widest leading-none">
-              API: {weather ? 'Visual Crossing Connected' : 'Disconnected'}
+              API: {isOffline ? 'Offline Mode' : (weather ? 'Visual Crossing Connected' : 'Disconnected')}
             </span>
           </div>
           <div className="flex items-center space-x-2">
