@@ -71,8 +71,8 @@ export default function Hourly96Tab({ weather }: { weather: WeatherData }) {
              </div>
           </div>
         </div>
-        <div className="w-full mt-8 relative" style={{ minHeight: '500px' }}>
-          <ResponsiveContainer width="100%" aspect={2}>
+        <div className="w-full mt-8 relative h-[500px]" style={{ minHeight: '500px' }}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTemp96" x1="0" y1="0" x2="0" y2="1">

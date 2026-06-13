@@ -37,17 +37,26 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
+      // Use an absolute path to ensure it matches the Express root-mounted API route
       const response = await fetch(`/api/weather?location=${encodeURIComponent(loc)}`);
       
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
         console.error('[App] Non-JSON response:', text);
-        throw new Error(`Server returned non-JSON response (${response.status}). The API route might be missing or the server is starting up.`);
+        if (response.status === 404) {
+          throw new Error('Server API endpoint not found (404). The server might still be starting up.');
+        }
+        throw new Error(`Server returned unexpected response (${response.status}).`);
       }
 
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        if (data.error.includes('VISUAL_CROSSING_API_KEY')) {
+          throw new Error('Visual Crossing API Key is missing. Please add it to "Settings > Secrets" in AI Studio.');
+        }
+        throw new Error(data.error);
+      }
       setWeather(data);
       localStorage.setItem('weather_location', loc);
     } catch (err: any) {

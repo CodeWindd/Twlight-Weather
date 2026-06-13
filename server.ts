@@ -11,6 +11,15 @@ const PORT = 3000;
 app.use(express.json());
 
 // API route to proxy Visual Crossing Weather API and SPC Mesoanalysis
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    environment: process.env.NODE_ENV || 'development', 
+    hasKey: !!process.env.VISUAL_CROSSING_API_KEY,
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/weather', async (req, res) => {
   const { location, unitGroup = 'us' } = req.query;
   const apiKey = process.env.VISUAL_CROSSING_API_KEY;

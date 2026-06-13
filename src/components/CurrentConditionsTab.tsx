@@ -398,8 +398,8 @@ export default function CurrentConditionsTab({ weather, currentLocation, onUpdat
             </div>
           </div>
         </div>
-        <div className="flex-1 w-full mt-8 relative" style={{ minHeight: '400px' }}>
-          <ResponsiveContainer width="99%" aspect={1.5}>
+        <div className="flex-1 w-full mt-8 relative h-[400px]" style={{ minHeight: '400px' }}>
+          <ResponsiveContainer width="100%" height="100%">
 
             <AreaChart data={hourlyData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
               <defs>
