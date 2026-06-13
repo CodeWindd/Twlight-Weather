@@ -1,0 +1,6 @@
+{
+  "name": "Twilight Weather",
+  "description": "High performance dark-themed weather dashboard with atmospheric mesoanalysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
