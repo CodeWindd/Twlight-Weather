@@ -37,23 +37,23 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      // Use an absolute path to ensure it matches the Express root-mounted API route
-      const response = await fetch(`/api/weather?location=${encodeURIComponent(loc)}`);
+      // Use relative fetch to avoid issues with sub-paths or proxies
+      const response = await fetch('./api/weather?location=' + encodeURIComponent(loc));
       
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
+        if (response.status === 404) {
+          throw new Error('Server API endpoint not found (404). This usually means the backend server is still booting up. Please wait 5 seconds and try again.');
+        }
         const text = await response.text();
         console.error('[App] Non-JSON response:', text);
-        if (response.status === 404) {
-          throw new Error('Server API endpoint not found (404). The server might still be starting up.');
-        }
         throw new Error(`Server returned unexpected response (${response.status}).`);
       }
 
       const data = await response.json();
       if (data.error) {
         if (data.error.includes('VISUAL_CROSSING_API_KEY')) {
-          throw new Error('Visual Crossing API Key is missing. Please add it to "Settings > Secrets" in AI Studio.');
+          throw new Error('Visual Crossing API Key is missing. Click the "Settings" (Gear icon) in the bottom-left sidebar of AI Studio, go to "Secrets", and add VISUAL_CROSSING_API_KEY.');
         }
         throw new Error(data.error);
       }
